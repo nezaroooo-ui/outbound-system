@@ -1,266 +1,550 @@
 'use client';
 
-import { useState } from 'react';
-import { DashboardLayout, designTokens } from '@/components/dashboard/layout';
+import { useState, useEffect, useCallback } from 'react';
 import { 
-  Mail, 
+  FileText, 
   Copy, 
-  Check, 
+  Save, 
   Send, 
-  Palette, 
+  CheckCircle, 
+  AlertCircle,
+  ChevronRight,
+  Mail,
+  Users,
   MessageSquare,
-  Sparkles
+  BarChart3,
+  Settings,
+  Home,
+  ExternalLink,
+  RefreshCw
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
-const t = designTokens;
+// Force dark mode
 const FORCE_DARK = true;
 
-const segments = [
-  { id: 'ecommerce', name: 'تجارة إلكترونية', icon: '🛒' },
-  { id: 'beauty', name: 'جمال وعطور', icon: '✨' },
-  { id: 'fashion', name: 'أزياء', icon: '👗' },
-  { id: 'electronics', name: 'إلكترونيات', icon: '📱' },
-];
-
-const emailTemplates = {
-  beauty: {
-    subject: 'سؤال حول علامتك التجارية',
-    opening: `أهلاً {{name}}،
-
-صادفت متجرك {company} وأعجبتني العلامة التجارية التي تبنيها.`,
-    body: `تستحق منتجاتك أن تُعرض بأفضل شكل. معظم العلامات التجارية التي نعمل معها لديها محتوى بصري ثمين لا تعرف حتى أنه موجود.
-
-لاحظت أن:
-- منتجاتك ذات جودة عالية
-- لكن صورك الحالية قد لا تحقق التحويلات بالشكل المطلوب
-
-ساعدنا علامات تجارية مشابهة في السعودية على زيادة تفاعلها بنسبة 3-5 أضعاف باستخدام محتوى الفيديو بالذكاء الاصطناعي بأسعار معقولة.
-
-هل أنت مستعد لمكالمة سريعة لمدة 5 دقائق لرؤية أمثلة خاصة بعلامتك التجارية؟`,
-    cta: 'احجز عرضاً سريعاً',
-  },
-  ecommerce: {
-    subject: 'سؤال سريع حول {{company}}',
-    opening: `أهلاً {{name}}،
-
-تصفحت متجرك ولاحظت منتجات رائعة.`,
-    body: `مجموعتك قوية، لكن هذا الذي أراه يوقف معظم متاجر التجارة الإلكترونية:
-
-الصور الثابتة لا تأخذك بعيداً. منافسيك يستخدمون الفيديو لعرض المنتجات بطرق توقف المستخدم وتدفعه للشراء.
-
-ساعدنا متاجر مثلك:
-- زيادة العائد على الإعلان بنسبة 40-60%
-- تقليل تكاليف إنتاج المحتوى بنسبة 70%
-- إنشاء إعلانات تحقق مبيعات حقيقية
-
-أفضل جزء؟ لست بحاجة لفريق إنتاج.
-
-هل تريد أن ترى ما ممكن لمتجرك؟`,
-    cta: 'شاهد الأمثلة',
-  },
+// Design Tokens
+const t = {
+  bgPrimary: 'bg-gray-950',
+  bgSecondary: 'bg-gray-900',
+  bgTertiary: 'bg-gray-800',
+  bgCard: 'bg-gray-900',
+  borderDefault: 'border-gray-800',
+  borderHover: 'border-gray-700',
+  borderActive: 'border-blue-500',
+  textPrimary: 'text-white',
+  textSecondary: 'text-gray-200',
+  textMuted: 'text-gray-400',
+  textDisabled: 'text-gray-500',
+  accent: 'text-blue-400',
+  accentBg: 'bg-blue-600',
+  accentHover: 'hover:bg-blue-700',
+  success: 'text-green-400',
+  successBg: 'bg-green-500',
+  warning: 'text-yellow-400',
+  warningBg: 'bg-yellow-500',
+  error: 'text-red-400',
+  errorBg: 'bg-red-500',
+  hover: 'hover:bg-gray-800',
 };
 
-export default function EmailTemplatesPage() {
-  const [selectedSegment, setSelectedSegment] = useState('beauty');
-  const [preview, setPreview] = useState(emailTemplates.beauty);
-  const [customize, setCustomize] = useState({
-    companyName: '',
-    contactName: '',
-    personalization: '',
+// Sector options
+const SECTOR_OPTIONS = [
+  { value: 'fashion', label: 'أزياء وجمال' },
+  { value: 'beauty', label: 'أزياء وجمال' },
+  { value: 'food', label: 'مطاعم وأغذية' },
+  { value: 'restaurant', label: 'مطاعم وأغذية' },
+  { value: 'medical', label: 'طبي وصحي' },
+  { value: 'health', label: 'طبي وصحي' },
+  { value: 'real estate', label: 'عقارات' },
+  { value: 'ecommerce', label: 'تجارة إلكترونية' },
+  { value: 'retail', label: 'تجارة إلكترونية' },
+  { value: 'default', label: 'عام' },
+];
+
+// Angle options
+const ANGLE_OPTIONS = [
+  { value: 'timing', label: 'التوقيت' },
+  { value: 'opportunity', label: 'الفرصة' },
+  { value: 'gap', label: 'الفجوة' },
+  { value: 'result', label: 'النتيجة' },
+  { value: 'credibility', label: 'المصداقية' },
+];
+
+// Proof Bank
+const PROOF_BANK: Record<string, string> = {
+  'fashion': 'متجر أزياء سعودي حقق 3x في التفاعل خلال أسبوع من فيديو منتج واحد مدته 45 ثانية',
+  'beauty': 'متجر أزياء سعودي حقق 3x في التفاعل خلال أسبوع من فيديو منتج واحد مدته 45 ثانية',
+  'food': 'سلسلة مطاعم في الخليج زادت طلبات التوصيل 40% بعد فيديو منتج واحد لأكلة رئيسية',
+  'restaurant': 'سلسلة مطاعم في الخليج زادت طلبات التوصيل 40% بعد فيديو منتج واحد لأكلة رئيسية',
+  'medical': 'عيادة خليجية ضاعفت حجوزاتها بفيديو تعريفي واحد بنى ثقة المرضى قبل الزيارة الأولى',
+  'health': 'عيادة خليجية ضاعفت حجوزاتها بفيديو تعريفي واحد بنى ثقة المرضى قبل الزيارة الأولى',
+  'real estate': 'شركة عقارية في الرياض باعت وحدات قبل الافتتاح بفيديو 60 ثانية أظهر الرؤية لا الطوب',
+  'ecommerce': 'متجر إلكتروني سعودي خفض تكلفة الإعلان 35% بعد استبدال الصور بفيديو منتج ذكي',
+  'retail': 'متجر إلكتروني سعودي خفض تكلفة الإعلان 35% بعد استبدال الصور بفيديو منتج ذكي',
+  'default': 'خبرة تسويقية تتجاوز 10 سنوات مع عشرات المتاجر والشركات في السعودية والخليج تعني فيديو مصمم ليبيع لا ليُشاهد فقط'
+};
+
+// Word limits
+const WORD_LIMITS: Record<string, number> = {
+  initial: 130,
+  followup: 80,
+  value: 100,
+  final: 60
+};
+
+// Banned phrases
+const BANNED_PHRASES = [
+  'أتمنى أن تجدك رسالتي بخير',
+  'تعرفت على شركتكم',
+  'نقدم خدمات في مجال',
+  'يسعدنا التواصل معكم',
+  'لا تترددوا في التواصل',
+  'نتطلع لسماع ردكم'
+];
+
+// Template subjects
+const SUBJECTS: Record<string, string> = {
+  initial: 'فكرة لنمو متجركم',
+  followup: 'سؤال واحد عن',
+  value: 'ما لاحظته في',
+  final: 'آخر رسالة مني'
+};
+
+export default function TemplatesPage() {
+  const [activeTab, setActiveTab] = useState('initial');
+  const [formData, setFormData] = useState({
+    company: '',
+    sector: 'default',
+    observation: '',
+    pain: '',
+    angle: 'opportunity',
+    cta: 'هل أجرب أقترح فكرة وحدة؟'
   });
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const handleSegmentChange = (segmentId: string) => {
-    setSelectedSegment(segmentId);
-    setPreview(emailTemplates[segmentId as keyof typeof emailTemplates] || emailTemplates.ecommerce);
+  // Get proof based on sector
+  const getProof = (sector: string): string => {
+    const sectorLower = sector?.toLowerCase() || '';
+    for (const key of Object.keys(PROOF_BANK)) {
+      if (sectorLower.includes(key)) {
+        return PROOF_BANK[key];
+      }
+    }
+    return PROOF_BANK.default;
   };
 
-  const copyToClipboard = () => {
-    const fullEmail = `Subject: ${preview.subject}
+  // Format sector for display
+  const formatSector = (sector: string): string => {
+    const sectorLabels: Record<string, string> = {
+      'fashion': 'الأزياء',
+      'beauty': 'الأزياء',
+      'food': 'الطعام',
+      'restaurant': 'الطعام',
+      'medical': 'الطب',
+      'health': 'الطب',
+      'real estate': 'العقارات',
+      'ecommerce': 'التجارة الإلكترونية',
+      'retail': 'التجارة الإلكترونية',
+      'default': 'قطاعكم'
+    };
+    return sectorLabels[sector] || sector;
+  };
 
-${preview.opening}
+  // Generate email content
+  const generateEmail = useCallback(() => {
+    const { company, sector, observation, pain, angle, cta } = formData;
+    const proof = getProof(sector);
+    const sectorDisplay = formatSector(sector);
 
-${preview.body}
+    if (activeTab === 'initial') {
+      const obs = observation || `أاحظ أن ${company} في طور التوسع في ${sectorDisplay} بالسوق السعودي`;
+      return `Subject: ${SUBJECTS.initial}
 
-${preview.cta}`;
-    navigator.clipboard.writeText(fullEmail);
+${obs}
+
+خلال أكثر من 10 سنوات في التسويق الرقمي وإدارة حملات لعشرات المتاجر والشركات في السعودية والخليج، تعلمت شيئاً واحداً: الفيديو الذي يُباع ليس الأجمل، بل الأذكى تسويقياً.
+
+${proof}
+
+${cta}
+
+نزار كامل
+NK-AI Video
+nezarkamel.com
+Instagram & TikTok: @nezarkamelai
+YouTube: @nezarkamel-AI | X: @nezarkamel_AI`;
+    } else if (activeTab === 'followup') {
+      const obs = observation || `هل تجد أن محتوى الفيديو الحالي يعكس فعلاً مستوى منتجاتكم في ${sectorDisplay}؟`;
+      const insight = `في ${sectorDisplay} الآن، الفيديو الأقصر (15-30 ثانية) يحقق تفاعلاً أعلى ب70%`;
+      return `Subject: ${SUBJECTS.followup} ${company}
+
+${obs}
+
+${insight}
+
+${cta}
+
+—
+نزار كامل | NK-AI Video | nezarkamel.com`;
+    } else if (activeTab === 'value') {
+      const obs = observation || `في قطاع ${sectorDisplay} هذا الشهر، لاحظت تحولاً نحو المحتوى البصري`;
+      return `Subject: ${SUBJECTS.value} ${sectorDisplay} هذا الشهر
+
+${obs}
+
+فيديو واحد ذكي يمكن أن يُحدث فرقاً في كيفية رؤية عملائكم لمنتجاتكم.
+
+${proof}
+
+هل هذا يلاحظه فريقكم أيضاً؟
+
+—
+نزار كامل | nezarkamel.com | NK-AI Video`;
+    } else {
+      return `Subject: ${SUBJECTS.final}
+
+أفهم أن التوقيت قد لا يكون مناسباً الآن.
+
+إذا قررت يوماً أن تحوّل أفكارك إلى فيديو يحكي قصة منتجك ويحقق نتائج حقيقية، أنا هنا.
+
+التواصل متاح دائماً على nezarkamel.com
+
+—
+نزار كامل
+NK-AI Video`;
+    }
+  }, [formData, activeTab]);
+
+  // Calculate word count
+  const wordCount = generateEmail().split(/\s+/).filter(w => w.length > 0).length;
+  const wordLimit = WORD_LIMITS[activeTab];
+  const wordCountColor = wordCount <= wordLimit * 0.9 ? 'text-green-400' : wordCount <= wordLimit ? 'text-yellow-400' : 'text-red-400';
+
+  // Quality checklist
+  const checklist = {
+    wordLimit: wordCount <= wordLimit,
+    notStartWithMe: !generateEmail().toLowerCase().startsWith('أنا') && !generateEmail().toLowerCase().startsWith('نحن'),
+    hasObservation: formData.observation.length > 10 || formData.company.length > 0,
+    noPricing: !generateEmail().toLowerCase().includes('سعر') && !generateEmail().toLowerCase().includes('ريال') && !generateEmail().toLowerCase().includes('خصم'),
+    oneCTA: (generateEmail().match(/هل/g) || []).length <= 2,
+    signatureComplete: generateEmail().includes('نزار كامل') && generateEmail().includes('nezarkamel.com'),
+    noBannedPhrases: !BANNED_PHRASES.some(phrase => generateEmail().includes(phrase))
+  };
+
+  const checklistPass = Object.values(checklist).filter(Boolean).length;
+  const checklistTotal = Object.keys(checklist).length;
+
+  // Copy to clipboard
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(generateEmail());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const generatedEmail = `
-الموضوع: ${preview.subject.replace('{{name}}', customize.contactName || '[الاسم]').replace('{{company}}', customize.companyName || '[الشركة]')}
+  // Save as draft
+  const handleSaveDraft = async () => {
+    setSaving(true);
+    try {
+      // Save to Google Sheets via API
+      const res = await fetch('/api/leads/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save-template-draft',
+          templateType: activeTab,
+          content: generateEmail(),
+          formData
+        })
+      });
+      if (res.ok) {
+        alert('تم حفظ المسودة بنجاح!');
+      }
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
-${preview.opening.replace('{{name}}', customize.contactName || '[الاسم]').replace('{company}', customize.companyName || '[الشركة]')}
+  // Send to Hala
+  const handleSendToHala = async () => {
+    setSending(true);
+    try {
+      const res = await fetch('/api/leads/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'submit-to-hala',
+          templateType: activeTab,
+          content: generateEmail(),
+          formData,
+          checklist
+        })
+      });
+      if (res.ok) {
+        alert('تم إرسال الرسالة لـ Hala للمراجعة!');
+      }
+    } catch (error) {
+      console.error('Failed to send to Hala:', error);
+    } finally {
+      setSending(false);
+    }
+  };
 
-${preview.body.replace('{company}', customize.companyName || '[الشركة]')}
-
-مع التحية،
-نزار كامل
----
-${preview.cta}
-`.trim();
+  const tabs = [
+    { id: 'initial', label: 'الرسالة الأولى', sublabel: 'Day 1', limit: 130 },
+    { id: 'followup', label: 'المتابعة الأولى', sublabel: 'Day 3', limit: 80 },
+    { id: 'value', label: 'رسالة القيمة', sublabel: 'Day 7', limit: 100 },
+    { id: 'final', label: 'الإغلاق', sublabel: 'Day 12', limit: 60 },
+  ];
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className={cn("text-2xl font-bold", t.textPrimary)}>
-              قوالب البريد الإلكتروني
-            </h1>
-            <p className={cn("mt-1", t.textMuted)}>
-              أنشئ وتخصيص قوالب التواصل لكل قطاع
-            </p>
+    <div className={t.bgPrimary}>
+      {/* Header */}
+      <header className={`border-b sticky top-0 z-50 ${t.bgSecondary} ${t.borderDefault}`}>
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 justify-between items-center">
+            <div className="flex items-center gap-4">
+              <button onClick={() => window.location.href = '/'} className="flex items-center gap-2 group cursor-pointer">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className={`text-lg font-bold ${t.textPrimary}`}>NK-AI Video</span>
+                  <span className={`text-xs -mt-1 ${t.textMuted}`}>AI Video Production</span>
+                </div>
+              </button>
+            </div>
+            
+            <nav className="flex items-center gap-1">
+              {[
+                { name: 'لوحة التحكم', href: '/', active: false },
+                { name: 'العملاء المحتملين', href: '/pipeline', active: false },
+                { name: 'الرسائل', href: '/templates', active: true },
+                { name: 'التقارير', href: '/reports', active: false },
+              ].map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    item.active
+                      ? 'bg-blue-600/20 text-blue-400'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  {item.name}
+                </a>
+              ))}
+            </nav>
           </div>
-          <button className={cn("flex items-center gap-2 px-4 py-2 rounded-lg", t.accentBg, "text-white", t.accentHover)}>
+        </div>
+      </header>
+
+      <main className="p-6">
+        {/* Section 1 - Header */}
+        <div className="mb-8">
+          <h1 className={`text-2xl font-bold ${t.textPrimary}`}>قوالب الرسائل | NK-AI Video</h1>
+          <p className={`mt-1 ${t.textMuted}`}>نظام الرسائل الديناميكي المخصص لكل عميل</p>
+        </div>
+
+        {/* Section 2 - Email Type Selector */}
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-shrink-0 px-4 py-3 rounded-xl border transition-all ${
+                activeTab === tab.id
+                  ? `${t.accentBg} text-white border-blue-500`
+                  : `${t.bgCard} ${t.textSecondary} ${t.borderDefault} hover:${t.borderHover}`
+              }`}
+            >
+              <div className="text-right">
+                <p className="font-medium">{tab.label}</p>
+                <p className="text-xs opacity-70">{tab.sublabel} - under {tab.limit} words</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Section 3 & 4 - Input & Preview */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Left Panel - Input */}
+          <div className={`${t.bgCard} rounded-xl border ${t.borderDefault} p-6`}>
+            <h3 className={`text-lg font-semibold ${t.textPrimary} mb-4`}>بيانات الرسالة</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm mb-1 ${t.textSecondary}`}>اسم الشركة *</label>
+                <input
+                  type="text"
+                  value={formData.company}
+                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-lg bg-transparent border ${t.borderDefault} ${t.textPrimary} focus:outline-none focus:border-blue-500`}
+                  placeholder="أدخل اسم الشركة"
+                />
+              </div>
+
+              <div>
+                <label className={`block text-sm mb-1 ${t.textSecondary}`}>القطاع</label>
+                <select
+                  value={formData.sector}
+                  onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-lg bg-transparent border ${t.borderDefault} ${t.textPrimary} focus:outline-none focus:border-blue-500`}
+                >
+                  {SECTOR_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={`block text-sm mb-1 ${t.textSecondary}`}>الملاحظة (من ليان)</label>
+                <textarea
+                  value={formData.observation}
+                  onChange={(e) => setFormData({ ...formData, observation: e.target.value })}
+                  rows={2}
+                  className={`w-full px-3 py-2 rounded-lg bg-transparent border ${t.borderDefault} ${t.textPrimary} focus:outline-none focus:border-blue-500`}
+                  placeholder="ملاحظة محددة عن العميل"
+                />
+              </div>
+
+              <div>
+                <label className={`block text mb-1 ${t.textSecondary}`}>نقطة الألم (من ليان)</label>
+                <textarea
+                  value={formData.pain}
+                  onChange={(e) => setFormData({ ...formData, pain: e.target.value })}
+                  rows={2}
+                  className={`w-full px-3 py-2 rounded-lg bg-transparent border ${t.borderDefault} ${t.textPrimary} focus:outline-none focus:border-blue-500`}
+                  placeholder="نقطة الألم الرئيسية"
+                />
+              </div>
+
+              <div>
+                <label className={`block text-sm mb-1 ${t.textSecondary}`}>الزاوية</label>
+                <select
+                  value={formData.angle}
+                  onChange={(e) => setFormData({ ...formData, angle: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-lg bg-transparent border ${t.borderDefault} ${t.textPrimary} focus:outline-none focus:border-blue-500`}
+                >
+                  {ANGLE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={`block text-sm mb-1 ${t.textSecondary}`}>CTA (دعوة للإجراء)</label>
+                <input
+                  type="text"
+                  value={formData.cta}
+                  onChange={(e) => setFormData({ ...formData, cta: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-lg bg-transparent border ${t.borderDefault} ${t.textPrimary} focus:outline-none focus:border-blue-500`}
+                  placeholder="هل أجرب أقترح فكرة وحدة؟"
+                />
+              </div>
+
+              <div className={`p-3 rounded-lg ${t.bgTertiary}`}>
+                <label className={`block text-sm mb-1 ${t.textMuted}`}>الدليل (يتحدد تلقائياً)</label>
+                <p className={`text-sm ${t.textSecondary}`}>{getProof(formData.sector)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel - Live Preview */}
+          <div className={`${t.bgCard} rounded-xl border ${t.borderDefault} p-6`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-lg font-semibold ${t.textPrimary}`}>معاينة مباشرة</h3>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm ${wordCountColor}`}>
+                  {wordCount} / {wordLimit} كلمة
+                </span>
+              </div>
+            </div>
+            
+            <div className={`p-4 rounded-lg ${t.bgTertiary} h-[400px] overflow-y-auto`}>
+              <pre className={`whitespace-pre-wrap text-sm ${t.textSecondary} font-sans leading-relaxed`}>
+                {generateEmail()}
+              </pre>
+            </div>
+
+            {/* Signature Block */}
+            <div className={`mt-4 pt-4 border-t ${t.borderDefault}`}>
+              <p className={`text-xs ${t.textMuted}`}>التوقيع الثابت:</p>
+              <pre className={`text-xs ${t.textMuted} mt-1`}>
+{'نزار كامل\nNK-AI Video - صناعة فيديوهات الذكاء الاصطناعي\nnezarkamel.com\nInstagram & TikTok: @nezarkamelai\nYouTube: @nezarkamel-AI | X: @nezarkamel_AI'}
+              </pre>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 5 - Quality Checklist */}
+        <div className={`${t.bgCard} rounded-xl border ${t.borderDefault} p-6 mb-6`}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className={`text-lg font-semibold ${t.textPrimary}`}>قائمة الجودة</h3>
+            <span className={`text-sm ${checklistPass === checklistTotal ? 'text-green-400' : 'text-yellow-400'}`}>
+              {checklistPass} / {checklistTotal} ✓
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Object.entries(checklist).map(([key, passed]) => (
+              <div 
+                key={key}
+                className={`flex items-center gap-2 p-2 rounded-lg ${
+                  passed ? 'bg-green-500/10' : 'bg-red-500/10'
+                }`}
+              >
+                {passed ? (
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-red-400" />
+                )}
+                <span className={`text-xs ${passed ? 'text-green-400' : 'text-red-400'}`}>
+                  {key === 'wordLimit' && 'تحت حد الكلمات'}
+                  {key === 'notStartWithMe' && 'لا تبدأ بـ أنا/نحن'}
+                  {key === 'hasObservation' && 'ملاحظة خاصة'}
+                  {key === 'noPricing' && 'لا أسعار'}
+                  {key === 'oneCTA' && 'CTA واحد'}
+                  {key === 'signatureComplete' && 'التوقيع مكتمل'}
+                  {key === 'noBannedPhrases' && 'لا عبارات ممنوعة'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 6 - Action Buttons */}
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleCopy}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${t.borderDefault} ${t.textSecondary} ${t.hover}`}
+          >
+            <Copy className="w-4 h-4" />
+            {copied ? 'تم النسخ!' : 'نسخ الرسالة'}
+          </button>
+          
+          <button
+            onClick={handleSaveDraft}
+            disabled={saving}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${t.borderDefault} ${t.textSecondary} ${t.hover}`}
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'جاري الحفظ...' : 'حفظ كمسودة'}
+          </button>
+          
+          <button
+            onClick={handleSendToHala}
+            disabled={sending || checklistPass < checklistTotal}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg ${t.accentBg} text-white ${t.accentHover} disabled:opacity-50`}
+          >
             <Send className="w-4 h-4" />
-            إرسال بريد تجريبي
+            {sending ? 'جاري الإرسال...' : 'إرسال لـ Hala للمراجعة'}
           </button>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Segment Selection & Customization */}
-          <div className="space-y-6">
-            {/* Segment Selector */}
-            <div className={cn(t.bgCard, "rounded-xl border", t.borderDefault, "p-6")}>
-              <h3 className={cn("font-semibold mb-4 flex items-center gap-2", t.textPrimary)}>
-                <Palette className="w-4 h-4" />
-                اختر القطاع
-              </h3>
-              <div className="space-y-2">
-                {segments.map((segment) => (
-                  <button
-                    key={segment.id}
-                    onClick={() => handleSegmentChange(segment.id)}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors',
-                      selectedSegment === segment.id
-                        ? cn(t.accentBg, 'text-white border-2 border-blue-500')
-                        : cn(t.bgTertiary, 'border-2 border-transparent hover:bg-gray-700', t.textSecondary)
-                    )}
-                  >
-                    <span className="text-xl">{segment.icon}</span>
-                    <span className="font-medium">{segment.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Customization */}
-            <div className={cn(t.bgCard, "rounded-xl border", t.borderDefault, "p-6")}>
-              <h3 className={cn("font-semibold mb-4 flex items-center gap-2", t.textPrimary)}>
-                <Sparkles className="w-4 h-4" />
-                تخصيص
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className={cn("block text-sm font-medium mb-1", t.textSecondary)}>
-                    اسم الشركة
-                  </label>
-                  <input
-                    type="text"
-                    value={customize.companyName}
-                    onChange={(e) => setCustomize({...customize, companyName: e.target.value})}
-                    placeholder="مثال: حياة بيوتي"
-                    className={cn("w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-                      t.inputBg, t.inputBorder, t.inputText, t.inputPlaceholder
-                    )}
-                  />
-                </div>
-                <div>
-                  <label className={cn("block text-sm font-medium mb-1", t.textSecondary)}>
-                    اسم جهة الاتصال
-                  </label>
-                  <input
-                    type="text"
-                    value={customize.contactName}
-                    onChange={(e) => setCustomize({...customize, contactName: e.target.value})}
-                    placeholder="مثال: أحمد"
-                    className={cn("w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-                      t.inputBg, t.inputBorder, t.inputText, t.inputPlaceholder
-                    )}
-                  />
-                </div>
-                <div>
-                  <label className={cn("block text-sm font-medium mb-1", t.textSecondary)}>
-                    نقطة تخصيص
-                  </label>
-                  <textarea
-                    value={customize.personalization}
-                    onChange={(e) => setCustomize({...customize, personalization: e.target.value})}
-                    placeholder="أضف ملاحظة محددة عن علامتهم التجارية..."
-                    rows={3}
-                    className={cn("w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-                      t.inputBg, t.inputBorder, t.inputText, t.inputPlaceholder
-                    )}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Email Preview */}
-          <div className="lg:col-span-2">
-            <div className={cn(t.bgCard, "rounded-xl border", t.borderDefault)}>
-              <div className={cn("px-6 py-4 border-b flex items-center justify-between", t.borderDefault)}>
-                <h3 className={cn("font-semibold flex items-center gap-2", t.textPrimary)}>
-                  <Mail className="w-4 h-4" />
-                  معاينة البريد
-                </h3>
-                <button
-                  onClick={copyToClipboard}
-                  className={cn("flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg transition-colors",
-                    t.hover, t.textMuted
-                  )}
-                >
-                  {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'تم النسخ!' : 'نسخ'}
-                </button>
-              </div>
-              
-              <div className="p-6">
-                {/* Subject */}
-                <div className="mb-6">
-                  <label className={cn("block text-sm font-medium mb-1", t.textMuted)}>الموضوع</label>
-                  <p className={cn("font-medium", t.textPrimary)}>
-                    {preview.subject.replace('{{name}}', customize.contactName || '[الاسم]').replace('{{company}}', customize.companyName || '[الشركة]')}
-                  </p>
-                </div>
-
-                {/* Email Body */}
-                <div className={cn("rounded-lg p-6", t.bgTertiary)}>
-                  <pre className={cn("whitespace-pre-wrap text-sm font-sans", t.textSecondary)}>
-{generatedEmail}
-                  </pre>
-                </div>
-
-                {/* CTA */}
-                <div className="mt-6 pt-4 border-t flex items-center gap-2">
-                  <span className={cn("text-sm", t.textMuted)}>الـ CTA: </span>
-                  <span className="text-blue-400 font-medium">{preview.cta}</span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className={cn("px-6 py-4 border-t flex gap-3", t.borderDefault, t.bgTertiary)}>
-                <button className={cn("flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border",
-                  t.bgSecondary, t.borderDefault, t.textSecondary, t.hover
-                )}>
-                  <MessageSquare className="w-4 h-4" />
-                  تعديل القالب
-                </button>
-                <button className={cn("flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg", t.accentBg, "text-white", t.accentHover)}>
-                  <Send className="w-4 h-4" />
-                  حفظ واستخدام
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </DashboardLayout>
+      </main>
+    </div>
   );
 }

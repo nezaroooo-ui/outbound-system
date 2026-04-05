@@ -2,8 +2,8 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Outbound Growth System | Nezar Kamel',
-  description: 'Multi-agent outbound client acquisition dashboard',
+  title: 'NK-AI Video | AI Video Production',
+  description: 'NK-AI Video - AI Video Production Dashboard',
 };
 
 export default function RootLayout({
@@ -31,8 +31,8 @@ export default function RootLayout({
                 </svg>
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-white">نظام النمو外向بي</h1>
-                <p className="text-xs text-slate-400">Outbound Growth System</p>
+                <h1 className="text-lg font-semibold text-white">NK-AI Video</h1>
+                <p className="text-xs text-slate-400">AI Video Production</p>
               </div>
             </div>
 
@@ -40,7 +40,7 @@ export default function RootLayout({
             <nav className="flex items-center gap-1">
               {[
                 { name: 'لوحة التحكم', href: '/', active: true },
-                { name: 'العملاء المحتملون', href: '/leads', active: false },
+                { name: 'العملاء المحتملين', href: '/leads', active: false },
                 { name: 'الرسائل', href: '/messages', active: false },
                 { name: 'التقارير', href: '/reports', active: false },
               ].map((item) => (

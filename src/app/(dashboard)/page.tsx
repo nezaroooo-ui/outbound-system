@@ -46,14 +46,18 @@ export default function HomePage() {
       const res = await fetch('/api/dashboard/stats?t=' + Date.now());
       const data = await res.json();
       
-      // Filter leads with email only
+      // Get all leads from API
       const allLeads = data.leads || [];
-      const leadsWithEmail = allLeads.filter((lead: any) => lead.email && lead.email.includes('@'));
       
-      setLeads(leadsWithEmail);
-      setStats({
-        totalLeads: leadsWithEmail.length,
-        pipeline: data.stats?.pipeline || {}
+      setLeads(allLeads);
+      setStats(data.stats || {
+        overview: {
+          totalLeads: data.stats?.totalLeads || 0,
+          emailsSent: data.stats?.pipeline?.sent || 0,
+          replies: data.stats?.pipeline?.replied || 0,
+          hotLeads: data.stats?.pipeline?.interested || 0,
+          warmLeads: 0
+        }
       });
       setConnectionStatus({
         sheets: data.connected === true,
@@ -139,8 +143,8 @@ export default function HomePage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className={cn("text-2xl font-bold", t.textPrimary)}>نظام outreach بالإيميل</h1>
-            <p className={cn("mt-1", t.textMuted)}>استقطاب عملاء جدد عبر البريد الإلكتروني</p>
+            <h1 className={cn("text-2xl font-bold", t.textPrimary)}>لوحة التحكم</h1>
+            <p className={cn("mt-1", t.textMuted)}>نظرة عامة على أداء النظام</p>
           </div>
           <div className="flex items-center gap-3">
             <button 
@@ -160,7 +164,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Stats - Simple Email Focused */}
+        {/* Stats - KPIs from Google Sheets */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className={cn(t.bgCard, "rounded-xl border", t.borderDefault, "p-5")}>
             <div className={cn("flex items-center gap-3 mb-2")}>
@@ -168,8 +172,8 @@ export default function HomePage() {
                 <Users className="w-4 h-4 text-blue-400" />
               </div>
             </div>
-            <p className={cn("text-2xl font-bold", t.textPrimary)}>{leads.length}</p>
-            <p className={cn("text-sm", t.textMuted)}>عملاء مع إيميل</p>
+            <p className={cn("text-2xl font-bold", t.textPrimary)}>{stats?.overview?.totalLeads || 0}</p>
+            <p className={cn("text-sm", t.textMuted)}>إجمالي الليدز</p>
           </div>
           
           <div className={cn(t.bgCard, "rounded-xl border", t.borderDefault, "p-5")}>
@@ -178,8 +182,8 @@ export default function HomePage() {
                 <Mail className="w-4 h-4 text-yellow-400" />
               </div>
             </div>
-            <p className={cn("text-2xl font-bold", t.textPrimary)}>{stats?.pipeline?.sent || 0}</p>
-            <p className={cn("text-sm", t.textMuted)}>تم الإرسال</p>
+            <p className={cn("text-2xl font-bold", t.textPrimary)}>{stats?.overview?.emailsSent || 0}</p>
+            <p className={cn("text-sm", t.textMuted)}>إيميلات أُرسلت</p>
           </div>
           
           <div className={cn(t.bgCard, "rounded-xl border", t.borderDefault, "p-5")}>
@@ -188,7 +192,7 @@ export default function HomePage() {
                 <CheckCircle className="w-4 h-4 text-green-400" />
               </div>
             </div>
-            <p className={cn("text-2xl font-bold", t.textPrimary)}>{stats?.pipeline?.replied || 0}</p>
+            <p className={cn("text-2xl font-bold", t.textPrimary)}>{stats?.overview?.replies || 0}</p>
             <p className={cn("text-sm", t.textMuted)}>ردود مستلمة</p>
           </div>
           
@@ -198,8 +202,8 @@ export default function HomePage() {
                 <Send className="w-4 h-4 text-purple-400" />
               </div>
             </div>
-            <p className={cn("text-2xl font-bold", t.textPrimary)}>{stats?.pipeline?.interested || 0}</p>
-            <p className={cn("text-sm", t.textMuted)}>مهتمين</p>
+            <p className={cn("text-2xl font-bold", t.textPrimary)}>{stats?.overview?.hotLeads || 0}</p>
+            <p className={cn("text-sm", t.textMuted)}>عملاء ساخنون</p>
           </div>
         </div>
 

@@ -109,13 +109,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   };
 
   const navigation = [
-    { name: 'Home', href: '/', icon: Home },
-    { name: 'Agents', href: '/agents', icon: Users },
-    { name: 'Templates', href: '/templates', icon: MessageSquare },
-    { name: 'Pipeline', href: '/pipeline', icon: Users },
-    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-    { name: 'Reports', href: '/reports', icon: FileText },
-    { name: 'Settings', href: '/settings', icon: Settings },
+    { name: 'لوحة التحكم', href: '/', icon: Home },
+    { name: 'العملاء المحتملين', href: '/pipeline', icon: Users },
+    { name: 'الرسائل', href: '/templates', icon: MessageSquare },
+    { name: 'التقارير', href: '/reports', icon: FileText },
   ];
 
   const agentStatus = [
@@ -142,7 +139,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <Activity className="w-5 h-5 text-white" />
                 </div>
-                <span className={cn('text-lg font-bold transition-colors', tokens.textPrimary, 'group-hover:text-blue-400')}>Outbound System</span>
+                <div className="flex flex-col">
+                  <span className={cn('text-lg font-bold transition-colors', tokens.textPrimary, 'group-hover:text-blue-400')}>NK-AI Video</span>
+                  <span className={cn('text-xs -mt-1', tokens.textMuted)}>AI Video Production</span>
+                </div>
               </button>
               <div className="hidden sm:flex items-center gap-2 text-sm">
                 <span className="text-gray-600">•</span>

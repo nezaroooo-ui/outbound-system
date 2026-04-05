@@ -40,8 +40,8 @@ export default function RootLayout({
             <nav className="flex items-center gap-1">
               {[
                 { name: 'لوحة التحكم', href: '/', active: true },
-                { name: 'العملاء المحتملين', href: '/leads', active: false },
-                { name: 'الرسائل', href: '/messages', active: false },
+                { name: 'العملاء المحتملين', href: '/pipeline', active: false },
+                { name: 'الرسائل', href: '/templates', active: false },
                 { name: 'التقارير', href: '/reports', active: false },
               ].map((item) => (
                 <a

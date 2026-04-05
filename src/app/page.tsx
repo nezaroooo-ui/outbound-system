@@ -200,53 +200,95 @@ function SystemHealth({ health, alerts }: { health: { metric: string; value: str
 // Main Dashboard
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
-  
-  // Mock Data - will be replaced with real API calls
-  const [kpiData] = useState<KPIData[]>([
-    { label: 'إجمالي العملاء المحتملين', value: 156, change: 12, trend: 'up' },
-    { label: 'الرسائل المرسلة', value: 89, change: 8, trend: 'up' },
-    { label: 'نسبة الاستجابة', value: 24, change: -3, trend: 'down' },
-    { value: 12, change: 2, trend: 'up', label: 'اجتماعات مجدولة' },
+  const [kpiData, setKpiData] = useState<KPIData[]>([
+    { label: 'إجمالي الليدز', value: 0, change: 0, trend: 'neutral' },
+    { label: 'إيميلات أُرسلت', value: 0, change: 0, trend: 'neutral' },
+    { label: 'ردود مستلمة', value: 0, change: 0, trend: 'neutral' },
+    { label: 'عملاء ساخنون', value: 0, change: 0, trend: 'neutral' },
   ]);
   
-  const [pipelineData] = useState([
-    { stage: 'جديد', count: 45, color: '#3b82f6' },
-    { stage: 'تم البحث', count: 38, color: '#8b5cf6' },
-    { stage: 'تم التواصل', count: 28, color: '#06b6d4' },
-    { stage: 'مهتم', count: 15, color: '#22c55e' },
-    { stage: 'اجتماع مجدول', count: 8, color: '#f59e0b' },
+  const [pipelineData, setPipelineData] = useState([
+    { stage: 'جديد', count: 0, color: '#3b82f6' },
+    { stage: 'تم البحث', count: 0, color: '#8b5cf6' },
+    { stage: 'تم التواصل', count: 0, color: '#06b6d4' },
+    { stage: 'مهتم', count: 0, color: '#22c55e' },
+    { stage: 'ساخن', count: 0, color: '#f59e0b' },
   ]);
   
-  const [leads] = useState<Lead[]>([
-    { id: '1', name: 'أحمد محمد', company: 'متجر العطور', email: 'ahmed@example.com', stage: 'جديد', lastContact: 'منذ 2 ساعة', source: 'بحث' },
-    { id: '2', name: 'سارة خالد', company: 'بيوتكس', email: 'sarah@example.com', stage: 'مهتم', lastContact: 'منذ 4 ساعة', source: 'حالة سابقة' },
-    { id: '3', name: 'عماد يوسف', company: 'نورا شوب', email: 'emad@example.com', stage: 'تم التواصل', lastContact: 'منذ 1 يوم', source: 'مصدر مباشر' },
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [healthData, setHealthData] = useState([
+    { metric: 'API', value: '...', status: 'warning' },
+    { metric: 'Google Sheets', value: 'جاري الاتصال...', status: 'warning' },
   ]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   
-  const [activities] = useState<AgentActivity[]>([
-    { agent: 'مازن', action: 'اكتشف 5 عملاء محتملين جدد', time: '08:30', status: 'completed' },
-    { agent: 'لينا', action: 'ثراء بيانات 12 عميل', time: '09:15', status: 'completed' },
-    { agent: 'يارا', action: 'صياغة استراتيجية الرسائل', time: '11:00', status: 'completed' },
-    { agent: 'سارة', action: 'كتابة النسخ', time: '13:00', status: 'running' },
-    { agent: 'هالة', action: 'مراجعة الجودة', time: '15:00', status: 'pending' },
-    { agent: 'أدهم', action: 'إرسال الرسائل المعتمدة', time: '16:30', status: 'pending' },
-  ]);
-  
-  const [healthData] = useState([
-    { metric: 'API', value: '99.9%', status: 'good' },
-    { metric: 'Cron Jobs', value: '14/14', status: 'good' },
-    { metric: 'Google Sheets', value: 'متصل', status: 'good' },
-  ]);
-  
-  const [alerts] = useState<Alert[]>([
-    { type: 'success', message: 'تم إرسال 10 رسائل بنجاح', time: '16:30' },
-    { type: 'info', message: 'بدأ دور عمل سارة في صياغة الرسائل', time: '13:00' },
-    { type: 'warning', message: '3 عملاء محتملون يحتاجون متابعة', time: '11:00' },
-  ]);
-
+  // Fetch real data from API
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(timer);
+    const fetchData = async () => {
+      try {
+        const res = await fetch('/api/dashboard/stats?t=' + Date.now());
+        const data = await res.json();
+        
+        if (data.connected) {
+          // Update KPIs from real sheet data
+          const totalLeads = data.stats?.overview?.totalLeads || data.stats?.totalLeads || 0;
+          const emailsSent = data.stats?.overview?.emailsSent || data.stats?.pipeline?.sent || 0;
+          const replies = data.stats?.overview?.replies || data.stats?.pipeline?.replied || 0;
+          const hotLeads = data.stats?.overview?.hotLeads || data.stats?.pipeline?.interested || 0;
+          
+          setKpiData([
+            { label: 'إجمالي الليدز', value: totalLeads, change: 0, trend: totalLeads > 0 ? 'up' : 'neutral' },
+            { label: 'إيميلات أُرسلت', value: emailsSent, change: 0, trend: emailsSent > 0 ? 'up' : 'neutral' },
+            { label: 'ردود مستلمة', value: replies, change: 0, trend: replies > 0 ? 'up' : 'neutral' },
+            { label: 'عملاء ساخنون', value: hotLeads, change: 0, trend: hotLeads > 0 ? 'up' : 'neutral' },
+          ]);
+          
+          // Update pipeline
+          const pipeline = data.stats?.pipelineByStage || {};
+          setPipelineData([
+            { stage: 'جديد', count: pipeline['جديد (New)'] || 0, color: '#3b82f6' },
+            { stage: 'مُثرى', count: pipeline['مُثرى (Enriched)'] || 0, color: '#8b5cf6' },
+            { stage: 'Sent', count: emailsSent, color: '#06b6d4' },
+            { stage: 'Replied', count: replies, color: '#22c55e' },
+            { stage: 'ساخن', count: hotLeads, color: '#f59e0b' },
+          ]);
+          
+          // Update leads from sheet
+          if (data.leads && data.leads.length > 0) {
+            const mappedLeads = data.leads.slice(0, 5).map((l: any, idx: number) => ({
+              id: String(idx + 1),
+              name: l.company_name || l.company || l['الشركة'] || 'غير معروف',
+              company: l.website || l.email || '—',
+              email: l.email || '—',
+              stage: l.status || l['الحالة'] || 'جديد',
+              lastContact: l['التاريخ'] || '—',
+              source: 'Google Sheets',
+            }));
+            setLeads(mappedLeads);
+          }
+          
+          // Update health
+          setHealthData([
+            { metric: 'API', value: '99.9%', status: 'good' },
+            { metric: 'Google Sheets', value: 'متصل', status: 'good' },
+          ]);
+          
+          // Add data status alert
+          setAlerts([
+            { type: 'success' as const, message: `تم تحميل ${totalLeads} ليد من Google Sheets`, time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) },
+          ]);
+        } else {
+          setAlerts([{ type: 'warning' as const, message: 'لم يتم الاتصال بـ Google Sheets', time: 'الآن' }]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+        setAlerts([{ type: 'error' as const, message: 'فشل في تحميل البيانات', time: 'الآن' }]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
   }, []);
 
   if (loading) {
@@ -308,10 +350,16 @@ export default function Dashboard() {
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Recent Leads - Section 4 */}
-        <RecentLeads leads={leads} />
+        <RecentLeads leads={leads.length > 0 ? leads : [
+          { id: '1', name: '—', company: 'لا توجد بيانات', email: '—', stage: 'جديد', lastContact: '—', source: '—' }
+        ]} />
         
         {/* Agent Timeline - Section 5 */}
-        <AgentTimeline activities={activities} />
+        <AgentTimeline activities={leads.length > 0 ? [
+          { agent: 'النظام', action: 'تم تحميل البيانات من Google Sheets', time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }), status: 'completed' as const },
+        ] : [
+          { agent: 'النظام', action: 'في انتظار البيانات...', time: '—', status: 'pending' as const },
+        ]} />
       </div>
 
       {/* System Health - Section 6 */}

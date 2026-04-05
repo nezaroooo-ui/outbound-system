@@ -2,145 +2,205 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-// Professional funnel with all your details
+// Company Info
 const COMPANY_INFO = {
-  name: 'نايزر كامل',
-  title: 'مؤسس وح strategist',
-  company: 'Nezar Leads',
-  website: 'https://nezarkamel.com/',
-  instagram: 'https://www.instagram.com/nezarkamelai/',
-  snapchat: 'https://www.snapchat.com/@nezarkamelai',
-  twitter: 'https://x.com/nezarkamel_AI',
-  youtube: 'https://www.youtube.com/@nezarkamel-AI',
-  threads: 'https://www.threads.com/@nezarkamelai'
+  name: 'نزار كامل',
+  title: 'مؤسس NK-AI Video',
+  company: 'NK-AI Video',
+  website: 'nezarkamel.com',
+  instagram: '@nezarkamelai',
+  tiktok: '@nezarkamelai',
+  youtube: '@nezarkamel-AI',
+  x: '@nezarkamel_AI'
 };
 
-// A/B Test Subject Lines
-const SUBJECT_LINES = {
-  initial: [
-    'فكرة لنمو متجرك {company}',
-    '{company} + محتوى فيديو احترافي',
-    'كيف يقود قطاعك السوق السعودي؟',
-    'سؤال حول علامتكم التجارية'
-  ],
-  followup: [
-    'متابعة: فكرة لنمو {company}',
-    'regarding {company}',
-    'فرصة للنمو - {company}'
-  ],
-  value: [
-    'ملاحظة سريعة حول {company}',
-    'سؤال regarding {company}',
-    'شيء مهم حول متجركم'
-  ],
-  final: [
-    'آخر رسالة - عرض متجركم',
-    'regarding {company} - الأخير',
-    'إذا احتجتم مساعدة مستقبلاً'
-  ]
+// Proof Bank - Auto-select based on sector
+const PROOF_BANK: Record<string, string> = {
+  'fashion': 'متجر أزياء سعودي حقق 3x في التفاعل خلال أسبوع من فيديو منتج واحد مدته 45 ثانية',
+  'beauty': 'متجر أزياء سعودي حقق 3x في التفاعل خلال أسبوع من فيديو منتج واحد مدته 45 ثانية',
+  'food': 'سلسلة مطاعم في الخليج زادت طلبات التوصيل 40% بعد فيديو منتج واحد لأكلة رئيسية',
+  'restaurant': 'سلسلة مطاعم في الخليج زادت طلبات التوصيل 40% بعد فيديو منتج واحد لأكلة رئيسية',
+  'medical': 'عيادة خليجية ضاعفت حجوزاتها بفيديو تعريفي واحد بنى ثقة المرضى قبل الزيارة الأولى',
+  'health': 'عيادة خليجية ضاعفت حجوزاتها بفيديو تعريفي واحد بنى ثقة المرضى قبل الزيارة الأولى',
+  'real estate': 'شركة عقارية في الرياض باعت وحدات قبل الافتتاح بفيديو 60 ثانية أظهر الرؤية لا الطوب',
+  'ecommerce': 'متجر إلكتروني سعودي خفض تكلفة الإعلان 35% بعد استبدال الصور بفيديو منتج ذكي',
+  'retail': 'متجر إلكتروني سعودي خفض تكلفة الإعلان 35% بعد استبدال الصور بفيديو منتج ذكي',
+  'default': 'خبرة تسويقية تتجاوز 10 سنوات مع عشرات المتاجر والشركات في السعودية والخليج تعني فيديو مصمم ليبيع لا ليُشاهد فقط'
 };
 
-// Get random subject line for A/B testing
-const getSubject = (type: string, companyName: string) => {
-  const subjects = SUBJECT_LINES[type as keyof typeof SUBJECT_LINES] || SUBJECT_LINES.initial;
-  const subject = subjects[Math.floor(Math.random() * subjects.length)];
-  return subject.replace('{company}', companyName);
+// Get proof based on sector
+const getProof = (sector: string): string => {
+  const sectorLower = sector?.toLowerCase() || '';
+  for (const key of Object.keys(PROOF_BANK)) {
+    if (sectorLower.includes(key)) {
+      return PROOF_BANK[key];
+    }
+  }
+  return PROOF_BANK.default;
+};
+
+// Format sector for display
+const formatSector = (sector: string): string => {
+  const sectorMap: Record<string, string> = {
+    'fashion': 'الأزياء',
+    'beauty': 'الجمال',
+    'food': 'الطعام',
+    'restaurant': 'المطاعم',
+    'medical': 'الطب',
+    'health': 'الصحة',
+    'real estate': 'العقارات',
+    'ecommerce': 'التجارة الإلكترونية',
+    'retail': 'التجزئة'
+  };
+  const sectorLower = sector?.toLowerCase() || '';
+  for (const key of Object.keys(sectorMap)) {
+    if (sectorLower.includes(key)) {
+      return sectorMap[key];
+    }
+  }
+  return sector || 'قطاعكم';
 };
 
 // Email Templates
 const templates = {
-  initial: (companyName: string) => `
-مرحباً فريق ${companyName}،
+  // Email 1 - First Touch (Day 1) - Under 130 words
+  initial: (data: { company: string; sector: string; observation?: string; subject?: string; cta?: string }) => {
+    const proof = getProof(data.sector);
+    const sectorDisplay = formatSector(data.sector);
+    
+    const observation = data.observation || `أاحظ أن ${data.company} في طور التوسع في ${sectorDisplay} بالسوق السعودي`;
+    const cta = data.cta || 'هل أجرب أقترح فكرة وحدة؟';
+    
+    return `Subject: ${data.subject || 'فكرة لنمو متجركم'}
 
-أتمنى أن تكونوا بخير.
+${observation}
 
-تابعنا عن كثب نمو متجركم في السوق السعودي، وأعجبتني العلامة التجارية التي تبّنونها.
+خلال أكثر من 10 سنوات في التسويق الرقمي وإدارة حملات لعشرات المتاجر والشركات في السعودية والخليج، تعلمت شيئاً واحداً: الفيديو الذي يُباع ليس الأجمل، بل الأذكى تسويقياً.
 
-في قطاعكم حالياً، هناك تحول كبير نحو المحتوى البصري. المنافسون يستخدمون الفيديو الاحترافي لجذب العملاء وزيادة المبيعات.
+${proof}
 
-**نحن في Nezar Leads متخصصون في:**
-• إنتاج محتوى فيديو احترافي بالذكاء الاصطناعي
-• مساعدة علامات سعودية في زيادة تفاعلها بنسبة تصل إلى 300%
-• توفير 70% من تكاليف إنتاج المحتوى التقليدي
+${cta}
 
-**هل تفضلون جلسة مجانية مدتها 15 دقيقة** لمناقشة كيف يمكننا مساعدة ${companyName}؟
+نزار كامل
+NK-AI Video
+nezarkamel.com
+Instagram & TikTok: @nezarkamelai
+YouTube: @nezarkamel-AI | X: @nezarkamel_AI`;
+  },
 
-مع التقدير،
+  // Email 2 - Follow Up (Day 3) - Under 80 words
+  followup: (data: { company: string; sector: string; question?: string; insight?: string }) => {
+    const sectorDisplay = formatSector(data.sector);
+    const question = data.question || `هل تجد أن محتوى الفيديو الحالي يعكس فعلاً مستوى منتجاتكم في ${sectorDisplay}؟`;
+    const insight = data.insight || `في ${sectorDisplay} الآن، الفيديو الأقصر (15-30 ثانية) يحقق تفاعلاً أعلى ب70%`;
+    
+    return `Subject: سؤال واحد عن ${data.company}
 
-**${COMPANY_INFO.name}**
-${COMPANY_INFO.title} | ${COMPANY_INFO.company}
+${question}
 
-🎯 متخصص في فيديو الذكاء الاصطناعي والتسويق
+${insight}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🌐 ${COMPANY_INFO.website}
-📸 ${COMPANY_INFO.instagram}
-🐦 ${COMPANY_INFO.twitter}
-🎬 ${COMPANY_INFO.youtube}
-`,
+${data.company}@gmail.com | nezarkamel.com
 
-  followup: (companyName: string) => `
-مرحباً،
+—
+نزار كامل | NK-AI Video`;
+  },
 
-ربما صادفت رسالتي السابقة حول محتوى الفيديو الاحترافي.
+  // Email 3 - Value Email (Day 7) - Under 100 words
+  value: (data: { company: string; sector: string; observation?: string; result?: string; question?: string }) => {
+    const sectorDisplay = formatSector(data.sector);
+    const proof = data.result || getProof(data.sector);
+    const observation = data.observation || `في قطاع ${sectorDisplay} هذا الشهر، لاحظت تحولاً نحو المحتوى البصري`;
+    const question = data.question || 'هل هذا يلاحظه فريقكم أيضاً؟';
+    
+    return `Subject: ما لاحظته في ${sectorDisplay} هذا الشهر
 
-فقط أردت إضافة نقطة مهمة:
+${observation}
 
-**الفرصة محدودة** - في السوق السعودي حالياً، قليل من العلامات تستخدم الفيديو بفعالية. هذا يعني فرصة ذهبية للتفوق على المنافسين.
+فيديو واحد ذكي يمكن أن يُحدث فرقاً في كيفية رؤية عملائكم لمنتجاتكم.
 
-هل مهتمين بمعرفة كيف يساعد الفيديو علامتكم؟
+${proof}
 
-بالتوفيق،
-**${COMPANY_INFO.name}**
+${question}
 
-🌐 ${COMPANY_INFO.website}
-📸 ${COMPANY_INFO.instagram}
-`,
+—
+نزار كامل | nezarkamel.com | NK-AI Video`;
+  },
 
-  value: (companyName: string) => `
-مرحباً،
+  // Email 4 - Closing (Day 12) - Under 60 words
+  final: (data: { company: string }) => {
+    return `Subject: آخر رسالة مني
 
-لاحظت شيئاً مهماً حول متجركم - منتجاتكم أو خدماتكم تستحق أن تُعرض بشكل أفضل.
+أفهم أن التوقيت قد لا يكون مناسباً الآن.
 
-هذا ملاحظة سريعة، لا أريد أن آخذ viel من وقتك.
+إذا قررت يوماً أن تحوّل أفكارك إلى فيديو يحكي قصة منتجك ويحقق نتائج حقيقية، أنا هنا.
 
-إذا حاببتوا تعرفون أكثر عن كيفية تحسين حضوركم البصري، أنا موجود.
+التواصل متاح دائماً على nezarkamel.com
 
-مع التقدير،
-**${COMPANY_INFO.name}**
-${COMPANY_INFO.company}
+—
+نزار كامل
+NK-AI Video`;
+  }
+};
 
-🌐 ${COMPANY_INFO.website}
-`,
+// Banned phrases that must never appear
+const BANNED_PHRASES = [
+  'أتمنى أن تجدك رسالتي بخير',
+  'تعرفت على شركتكم',
+  'نقدم خدمات في مجال',
+  'يسعدنا التواصل معكم',
+  'لا تترددوا في التواصل',
+  'نتطلع لسماع ردكم'
+];
 
-  final: (companyName: string) => `
-مرحباً،
+// Validate email for banned phrases
+const validateEmail = (text: string): { valid: boolean; violations: string[] } => {
+  const violations: string[] = [];
+  for (const phrase of BANNED_PHRASES) {
+    if (text.toLowerCase().includes(phrase.toLowerCase())) {
+      violations.push(phrase);
+    }
+  }
+  return { valid: violations.length === 0, violations };
+};
 
-هذه آخر رسالة مني بهذا الخصوص.
-
-فهمت أن الوقت الحالي ليس مناسباً، وأقدر ذلك.
-
-**إذا في أي وقت** تحتاجون مساعدة في:
-• إنتاج محتوى فيديو بالذكاء الاصطناعي
-• إعلانات جذابة لمتجركم
-• تطوير حضوركم على السوشيال ميديا
-
-أنا موجود ومساعدتك.
-
-بالتوفيق لكم في عملكم،
-
-**${COMPANY_INFO.name}**
-${COMPANY_INFO.title} | ${COMPANY_INFO.company}
-
-🌐 ${COMPANY_INFO.website}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`
+// Get template by type
+const getTemplate = (type: string) => {
+  const templateKeys: Record<string, string> = {
+    '1': 'initial',
+    'first': 'initial',
+    'initial': 'initial',
+    'day1': 'initial',
+    '2': 'followup',
+    'follow': 'followup',
+    'followup': 'followup',
+    'day3': 'followup',
+    '3': 'value',
+    'value': 'value',
+    'day7': 'value',
+    '4': 'final',
+    'closing': 'final',
+    'final': 'final',
+    'day12': 'final'
+  };
+  return templateKeys[type?.toLowerCase()] || 'initial';
 };
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { to, companyName, emailType = 'initial' } = body;
+    const { 
+      to, 
+      companyName, 
+      sector = 'default',
+      observation,
+      subject,
+      cta,
+      question,
+      insight,
+      result,
+      emailType = 'initial'
+    } = body;
 
     if (!to || !companyName) {
       return NextResponse.json({ 
@@ -150,12 +210,34 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Get email template
-    const templateFn = templates[emailType as keyof typeof templates] || templates.initial;
-    const emailBody = templateFn(companyName);
+    // Get template function
+    const templateKey = getTemplate(emailType);
+    const templateFn = templates[templateKey as keyof typeof templates];
     
-    // Get A/B test subject line
-    const subject = getSubject(emailType, companyName);
+    // Build data object
+    const templateData = {
+      company: companyName,
+      sector,
+      observation,
+      subject,
+      cta,
+      question,
+      insight,
+      result
+    };
+    
+    // Generate email
+    const emailBody = templateFn(templateData);
+    
+    // Extract subject line
+    const subjectLine = emailBody.split('\n')[0].replace('Subject: ', '').trim();
+    const emailContent = emailBody.split('\n').slice(1).join('\n').trim();
+    
+    // Validate
+    const validation = validateEmail(emailContent);
+    if (!validation.valid) {
+      console.warn('⚠️ Email contains banned phrases:', validation.violations);
+    }
 
     // Get SMTP config
     const configPath = path.join(process.env.HOME || '/root', '.config/imap-smtp-email/.env');
@@ -188,21 +270,23 @@ export async function POST(request: Request) {
     await transporter.sendMail({
       from: smtpFrom || smtpUser,
       to: to,
-      subject: subject,
-      text: emailBody,
+      subject: subjectLine,
+      text: emailContent,
     });
 
-    // Log for A/B testing
-    console.log(`📧 Email sent: type=${emailType}, to=${to}, subject="${subject}"`);
+    console.log(`📧 Email sent: type=${templateKey}, to=${to}, subject="${subjectLine}"`);
 
     return NextResponse.json({ 
       success: true, 
       message: 'Email sent successfully',
       details: {
-        type: emailType,
-        subject: subject,
+        type: templateKey,
+        subject: subjectLine,
         to: to,
         company: companyName,
+        sector: sector,
+        proofUsed: getProof(sector),
+        wordCount: emailContent.split(/\s+/).length,
         timestamp: new Date().toISOString()
       }
     });
@@ -217,12 +301,25 @@ export async function GET() {
   return NextResponse.json({
     company: COMPANY_INFO,
     templates: Object.keys(templates),
-    subjectLines: SUBJECT_LINES,
+    proofBank: PROOF_BANK,
+    bannedPhrases: BANNED_PHRASES,
     usage: {
       POST: {
         to: 'email@example.com',
         companyName: 'اسم الشركة',
+        sector: 'fashion | food | medical | real estate | ecommerce | default',
+        observation: 'ملاحظة محددة عن الشركة',
+        subject: 'سطر الموضوع',
+        cta: 'دعوة للإجراء',
+        question: 'سؤال للمتابعة',
+        insight: 'نقطة قيمة',
         emailType: 'initial | followup | value | final'
+      },
+      examples: {
+        firstTouch: '/api/email/send with emailType: "initial"',
+        followUp: '/api/email/send with emailType: "followup"',
+        valueEmail: '/api/email/send with emailType: "value"',
+        closing: '/api/email/send with emailType: "final"'
       }
     }
   });
